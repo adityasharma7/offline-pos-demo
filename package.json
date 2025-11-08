@@ -1,0 +1,13 @@
+{
+  "name": "offline-pos-demo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Root setup to run frontend and backend from a single place",
+  "scripts": {
+    "install": "npm run install:all",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "dev": "npm --prefix backend start & npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend start",
+    "dev:frontend": "npm --prefix frontend run dev"
+  }
+}
