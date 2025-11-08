@@ -1,12 +1,40 @@
-import { useState } from 'react';
-import { Button, Card, CardContent, Typography, Grid, TextField, IconButton, Divider, Box, Stack } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Button, Card, CardContent, Typography, Grid, TextField, IconButton, Divider, Box, Stack, Pagination } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import products from './products';
 
 function App() {
   const [cart, setCart] = useState([]);
   const [query, setQuery] = useState('');
   const [quantities, setQuantities] = useState({});
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const res = await fetch('http://localhost:3001/api/products', { signal: controller.signal });
+        if (!res.ok) throw new Error(`Failed to load products: ${res.status}`);
+        const data = await res.json();
+        setProducts(data);
+      } catch (e) {
+        if (e.name !== 'AbortError') setError(e.message || 'Failed to load products');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
 
   const setProductQty = (productId, qty) => {
     const value = Math.max(1, Number(qty) || 1);
@@ -44,6 +72,10 @@ function App() {
     );
   });
 
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  const pagedProducts = filteredProducts.slice(start, end);
+
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-4xl mx-auto">
@@ -64,8 +96,16 @@ function App() {
                     onChange={(e) => setQuery(e.target.value)}
                   />
                 </Stack>
+                {loading && (
+                  <Typography variant="body2" color="text.secondary">Loading products...</Typography>
+                )}
+                {!!error && (
+                  <Typography variant="body2" color="error">{error}</Typography>
+                )}
+                {!loading && !error && (
+                <>
                 <Grid container spacing={2}>
-                  {filteredProducts.map((product) => (
+                  {pagedProducts.map((product) => (
                     <Grid item xs={12} sm={6} key={product.id}>
                       <Card variant="outlined">
                         <CardContent>
@@ -95,6 +135,21 @@ function App() {
                     </Grid>
                   ))}
                 </Grid>
+                {filteredProducts.length === 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>No products found.</Typography>
+                )}
+                {filteredProducts.length > pageSize && (
+                  <Box display="flex" justifyContent="center" sx={{ mt: 2 }}>
+                    <Pagination
+                      count={Math.ceil(filteredProducts.length / pageSize)}
+                      page={page}
+                      onChange={(_, value) => setPage(value)}
+                      color="primary"
+                    />
+                  </Box>
+                )}
+                </>
+                )}
               </CardContent>
             </Card>
           </Grid>
